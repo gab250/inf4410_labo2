@@ -9,6 +9,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Map;
+import java.util.Random;
 
 public class ServerNode implements ServerNodeInterface {
 
@@ -16,8 +17,7 @@ public class ServerNode implements ServerNodeInterface {
 	private String name_;
 	private int id_;
 	private int capacity_;
-	private int reservedResources_;
-	private float failureRate_;
+	private float calculationFailureRate_;
 	
 	public static void main(String[] args)
 	{
@@ -40,10 +40,8 @@ public class ServerNode implements ServerNodeInterface {
 				
 		dispatcher_ = loadDispatcherStub(hostName);
 		capacity_ = capacity;
-		failureRate_ = failureRate;
-		reservedResources_ = 0;
-		
-	}
+		calculationFailureRate_ = failureRate;
+    }
 	
 	public void Report(Map<String,Integer> result)
 	{
@@ -70,7 +68,6 @@ public class ServerNode implements ServerNodeInterface {
 			ServerNodeInterface stub = (ServerNodeInterface) UnicastRemoteObject.exportObject(this, 5002);
 			Registry registry = LocateRegistry.getRegistry(5001);
 			registry.rebind(name_, stub);
-
 		}
 		catch(ConnectException e)
 		{
@@ -97,13 +94,26 @@ public class ServerNode implements ServerNodeInterface {
 	@Override
 	public int Process(byte[] workLoad) throws RemoteException 
 	{
-		WorkUnit workUnit = new WorkUnit(this,workLoad);
-		Thread workingThread = new Thread(workUnit);
-		workingThread.start();
+		int result;
 		
-		System.out.println("Server Node : Work Started ( " + Integer.toString(workLoad.length) + " B)");
+		if(!IsFailing(workLoad.length))
+		{
+	    	WorkUnit workUnit = new WorkUnit(this,workLoad);
+			Thread workingThread = new Thread(workUnit);
+			workingThread.start();
+			
+			System.out.println("Server Node : Work Started ( " + Integer.toString(workLoad.length) + " B)");
+			
+			result=0;
+		}
+		else
+		{
+			System.out.println("Work failed");
+			
+			result=-1;
+		}
 				
-		return 0;
+		return result;
 	}
 
 	@Override
@@ -132,6 +142,34 @@ public class ServerNode implements ServerNodeInterface {
 		}
 		
 		return stub;
+	}
+	
+	private boolean IsFailing(int size)
+	{
+		Random rand = new Random();
+		int random = rand.nextInt();
+		boolean result;
+		
+		if(size > capacity_)
+		{
+			int percentage = ((size - capacity_)/(9*capacity_))*100;
+			
+			if(random%100<=percentage)
+			{
+				result = true;
+			}
+			else
+			{
+				result = false;
+			}
+		}
+		else
+		{
+			result = false;
+		}
+		
+		return result;
+
 	}
 
 }

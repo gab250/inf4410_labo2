@@ -17,6 +17,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class Dispatcher implements DispatcherInterface {
 	
 	static private Map<Integer,Map<String,Integer>> results_;
+	static private Map<Integer, Integer> workersNbOfJobsDone_;
 	static private Lock lock_;
 	
 	private Map<Integer,ServerNodeInterface> Workers_; 
@@ -112,9 +113,10 @@ public class Dispatcher implements DispatcherInterface {
 		byte[] workLoadInByte = workLoad.getBytes();
 		Map<String,Integer> combinedResults = new HashMap<String,Integer>();
 						
-		//Clear results
+		//Clear results 
 		results_ = new HashMap<Integer,Map<String,Integer>>();
-			
+		workersNbOfJobsDone_ = new HashMap<Integer,Integer>();
+				
 		//Dispatch to workers
 		
 		//Check livelyness of workers
@@ -126,23 +128,72 @@ public class Dispatcher implements DispatcherInterface {
 		//Dispatch work
 		if(aliveWorkers.size() > 0)
 		{
+			Map<Integer,Vector<Interval>> workDispatchingJournal = new HashMap<Integer,Vector<Interval>>();
+			FileDataContainer data = new FileDataContainer(workLoadInByte);
+			
+			//initialize vectors of workHistory
+			for(int i=0; i<aliveWorkers.size(); ++i)
+			{
+				workDispatchingJournal.put(aliveWorkers.get(i), new Vector<Interval>());
+			}
+			
+			/*
 			int sizeOfWorkload = workLoadInByte.length/aliveWorkers.size();
-						
+			int processErrorCode;
+			
 			for(int i=0; i<aliveWorkers.size(); ++i)
 			{
 				if(i != aliveWorkers.size() -1 )
 				{
-					Workers_.get(aliveWorkers.get(i)).Process(Arrays.copyOfRange(workLoadInByte, i*sizeOfWorkload, i*sizeOfWorkload + (sizeOfWorkload-1)));
+					processErrorCode = Workers_.get(aliveWorkers.get(i)).Process(Arrays.copyOfRange(workLoadInByte, i*sizeOfWorkload, i*sizeOfWorkload + (sizeOfWorkload-1)));
 				}
 				else
 				{	
-					Workers_.get(aliveWorkers.get(i)).Process(Arrays.copyOfRange(workLoadInByte, i*sizeOfWorkload, workLoadInByte.length-1));
+					processErrorCode = Workers_.get(aliveWorkers.get(i)).Process(Arrays.copyOfRange(workLoadInByte, i*sizeOfWorkload, workLoadInByte.length-1));
 				}
+
 			}
+		    */
 			
-			int nbOfWorkers = aliveWorkers.size();
-			
-			//Wait for results
+			//Initialize
+			for(int i=0; i<aliveWorkers.size(); ++i)
+			{
+				workersNbOfJobsDone_.put(aliveWorkers.get(i), 0);
+			}
+						
+			//Dispatch work
+			while(data.DataLeft() > 0)
+			{	
+				int k=0;
+				
+				for(int i=0; i<aliveWorkers.size(); ++i)
+				{
+					int j=0;
+					int processErrorCode;
+					
+					do
+					{
+						processErrorCode = Workers_.get(aliveWorkers.get(i)).Process(data.GetDataPortion(data.getPourcentageLeft()/(aliveWorkers.size()-i + j)));
+							
+     					if(processErrorCode == 0)
+						{
+							float pourcentageConfirmer = data.getPourcentageLeft()/(aliveWorkers.size()-i + j);
+														
+							Interval workHistory = data.Confirm(pourcentageConfirmer);
+							workDispatchingJournal.get(aliveWorkers.get(i)).add(workHistory);
+						}
+						
+						j++;
+						
+					}while(processErrorCode == -1);
+				
+				}
+				
+				k++;
+			}				
+						
+     		//Wait for results
+     		/*
 			while(GetResultSize()<nbOfWorkers)
 			{
 				try 
@@ -154,7 +205,26 @@ public class Dispatcher implements DispatcherInterface {
 					e.printStackTrace();
 				}
 			}
-						
+			*/
+     		
+     		boolean waitDone;
+     		
+     		//Wait for completion
+     		do
+     		{
+     			waitDone = true;
+     			
+     			for(int i=0; i<aliveWorkers.size() ; ++i)
+     			{
+     				if(GetNbOfWorkDone(aliveWorkers.get(i)) < workDispatchingJournal.get(aliveWorkers.get(i)).size())
+     				{
+     					waitDone = false;
+     				}
+      			}
+         			
+     		}while(!waitDone);
+     		
+     		
 			//Merge results
 			for(int i=0; i<aliveWorkers.size(); ++i)
 			{
@@ -246,13 +316,64 @@ public class Dispatcher implements DispatcherInterface {
 		
 		try
 		{
-			results_.put(workerID, result);
+		
+			if(!results_.containsKey(workerID))
+			{
+				results_.put(workerID, result);
+				workersNbOfJobsDone_.put(workerID, 1);
+			}
+			else
+			{
+				//New results 
+				Map<String,Integer> combinedResults = new HashMap<String,Integer>();
+				
+				//Merge results
+				for(Entry<String, Integer> entry : results_.get(workerID).entrySet())
+				{
+					if(combinedResults.containsKey(entry.getKey()))
+					{
+						int oldValue = combinedResults.get(entry.getKey());
+						int newValue = oldValue + results_.get(workerID).get(entry.getKey());
+					
+						combinedResults.put(entry.getKey(), newValue);
+					}
+					else
+					{
+						combinedResults.put(entry.getKey(), entry.getValue());
+					}
+				}
+				
+				int oldValue = workersNbOfJobsDone_.get(workerID);
+				int newValue = ++oldValue;
+				
+				workersNbOfJobsDone_.put(workerID, newValue);
+				
+			}
+			
 		}
 		finally
 		{
 			lock_.unlock();
 		}
 		
+	}
+	
+	private int GetNbOfWorkDone(int workerId)
+	{
+		int result=0;
+		
+		lock_.lock();
+		
+		try
+		{
+			result	= workersNbOfJobsDone_.get(workerId);
+		}
+		finally
+		{
+			lock_.unlock();
+		}
+		
+		return result;
 	}
 
 	private Map<String,Integer> GetResult(int workerID)
