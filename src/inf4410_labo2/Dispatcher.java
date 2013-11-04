@@ -107,12 +107,14 @@ public class Dispatcher implements DispatcherInterface {
 	@Override
 	public Map<String,Integer> Process(String workLoad) throws RemoteException 
 	{
+		long start = System.nanoTime();
+		long end=0;
 		byte[] workLoadInByte = workLoad.getBytes();
-		String result=null;
+		Map<String,Integer> combinedResults = new HashMap<String,Integer>();
 						
 		//Clear results
 		results_ = new HashMap<Integer,Map<String,Integer>>();
-		
+			
 		//Dispatch to workers
 		
 		//Check livelyness of workers
@@ -137,49 +139,51 @@ public class Dispatcher implements DispatcherInterface {
 					Workers_.get(aliveWorkers.get(i)).Process(Arrays.copyOfRange(workLoadInByte, i*sizeOfWorkload, workLoadInByte.length-1));
 				}
 			}
+			
+			int nbOfWorkers = aliveWorkers.size();
+			
+			//Wait for results
+			while(GetResultSize()<nbOfWorkers)
+			{
+				try 
+				{
+					Thread.sleep(0, 1);
+					
+				} catch (InterruptedException e) 
+				{
+					e.printStackTrace();
+				}
+			}
+						
+			//Merge results
+			for(int i=0; i<aliveWorkers.size(); ++i)
+			{
+				for(Entry<String, Integer> entry : results_.get(aliveWorkers.get(i)).entrySet())
+				{
+					if(combinedResults.containsKey(entry.getKey()))
+					{
+						int oldValue = combinedResults.get(entry.getKey());
+						int newValue = oldValue + results_.get(aliveWorkers.get(i)).get(entry.getKey());
+					
+						combinedResults.put(entry.getKey(), newValue);
+					}
+					else
+					{
+						combinedResults.put(entry.getKey(), entry.getValue());
+					}
+				}
+			}
 					
 		}
 		else
 		{
-			result = "Impossible to process, no workers";
+			combinedResults = null;
 		}
 		
-		int nbOfWorkers = aliveWorkers.size();
+		end = System.nanoTime();
 		
-		//Wait for results
-		while(GetResultSize()<nbOfWorkers)
-		{
-			try 
-			{
-				Thread.sleep(1);
-				
-			} catch (InterruptedException e) 
-			{
-				e.printStackTrace();
-			}
-		}
+		System.out.println("Execution time : " + Float.toString((float)((end-start)/1000000.0)) + " ms");
 		
-		//Merge results
-		Map<String,Integer> combinedResults = new HashMap<String,Integer>();
-		
-		for(int i=1; i<=results_.size(); ++i)
-		{
-			for(Entry<String, Integer> entry : results_.get(i).entrySet())
-			{
-				if(combinedResults.containsKey(entry.getKey()))
-				{
-					int oldValue = combinedResults.get(entry.getKey());
-					int newValue = oldValue + results_.get(i).get(entry.getKey());
-				
-					combinedResults.put(entry.getKey(), newValue);
-				}
-				else
-				{
-					combinedResults.put(entry.getKey(), entry.getValue());
-				}
-			}
-		}
-				
 		return combinedResults;
 	}
 	

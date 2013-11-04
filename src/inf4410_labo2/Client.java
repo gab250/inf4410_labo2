@@ -45,14 +45,18 @@ public class Client
 			
 			if(data!=null)
 			{
-				long start = System.nanoTime();
-				String result = client.Process(data);
-				long end = System.nanoTime();
 				
-				System.out.println("Result : ");
-				System.out.println(result);
-				System.out.println("Time in ms : " + Float.toString((float)((end-start)/1000000.0)));
-
+				String result = client.Process(data);
+				
+				if(result!=null)
+				{
+					System.out.println("Result : ");
+					System.out.println(result);
+				}
+				else
+				{
+					System.out.println("Dispatcher is out of worker, couldn't do job");
+				}
 			}
 			
 		}
@@ -74,9 +78,16 @@ public class Client
 			System.err.println("Error in dispatcher : " + e.getMessage());
 		}
 		
-		for(Entry<String, Integer> entry : result.entrySet())
+		if(result!=null)
 		{
-			formatedResult += entry.getKey() + "  " + Integer.toString(entry.getValue()) + System.getProperty("line.separator");;
+			for(Entry<String, Integer> entry : result.entrySet())
+			{
+				formatedResult += entry.getKey() + "  " + Integer.toString(entry.getValue()) + System.getProperty("line.separator");;
+			}
+		}
+		else
+		{
+			formatedResult = null;
 		}
 		
 		return formatedResult;
