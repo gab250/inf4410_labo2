@@ -8,15 +8,20 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Map;
 
 public class ServerNode implements ServerNodeInterface {
 
 	private DispatcherInterface dispatcher_;
 	private String name_;
+	private int id_;
+	private int capacity_;
+	private int reservedResources_;
+	private float failureRate_;
 	
 	public static void main(String[] args)
 	{
-		ServerNode serverNode = new ServerNode(args[0]);
+		ServerNode serverNode = new ServerNode(args[0],args[1],Integer.valueOf(args[2]),Float.valueOf(args[3]));
 		
 		try 
 		{
@@ -29,12 +34,27 @@ public class ServerNode implements ServerNodeInterface {
 		
 	}
 	
-	public ServerNode(String hostName)
+	public ServerNode(String hostName, String name, int capacity,float failureRate)
 	{
-		name_ = "Worker1";
+		name_ = name;
 				
 		dispatcher_ = loadDispatcherStub(hostName);
+		capacity_ = capacity;
+		failureRate_ = failureRate;
+		reservedResources_ = 0;
 		
+	}
+	
+	public void Report(Map<String,Integer> result)
+	{
+		try 
+		{
+			dispatcher_.Report(id_, result);
+		} 
+		catch (RemoteException e) {
+			
+			System.err.println("Error : " + e.getMessage());
+		}
 	}
 	
 	private void run() throws Exception
@@ -63,30 +83,33 @@ public class ServerNode implements ServerNodeInterface {
 		}
 		
 		//Register current Node to dispatcher
-		dispatcher_.Register(InetAddress.getLocalHost().getHostName(), name_);
+		id_ = dispatcher_.Register(InetAddress.getLocalHost().getHostName(), name_);
+		
+		//Register failed
+		if(id_ <= 0)
+		{
+			System.err.println("Couldn't register, closing node...");
+			System.exit(-1);
+		}
 		
 	}
 		
 	@Override
-	public int Process(String[] workLoad) throws RemoteException 
+	public int Process(byte[] workLoad) throws RemoteException 
 	{
-
-		try 
-		{
-			dispatcher_.Register(InetAddress.getLocalHost().getHostAddress(), name_);
-		} 
-		catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		WorkUnit workUnit = new WorkUnit(this,workLoad);
+		Thread workingThread = new Thread(workUnit);
+		workingThread.start();
+		
+		System.out.println("Server Node : Work Started ( " + Integer.toString(workLoad.length) + " B)");
 				
 		return 0;
 	}
 
 	@Override
-	public boolean IsAlive() throws RemoteException {
-		// TODO Auto-generated method stub
-		return false;
+	public boolean IsAlive() throws RemoteException 
+	{
+		return true;
 	}
 	
 	private DispatcherInterface loadDispatcherStub(String hostname)

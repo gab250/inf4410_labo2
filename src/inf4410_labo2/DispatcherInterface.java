@@ -8,5 +8,5 @@ public interface DispatcherInterface extends Remote
 {
 	public int Register(String hostAdress, String workerName) throws RemoteException;
 	public void Report(int worker,Map<String,Integer> result) throws RemoteException;
-	public String Process(String[] workLoad) throws RemoteException;
+	public Map<String,Integer> Process(String workLoad) throws RemoteException;
 }

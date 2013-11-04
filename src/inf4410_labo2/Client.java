@@ -29,12 +29,13 @@ public class Client
 			String fileName = args[2];
 			Charset encoding = Charset.defaultCharset();
 			String data=null;
-			
+						
 			byte[] encoded;
 			
 			try 
 			{
 				encoded = Files.readAllBytes(Paths.get(args[2]));
+				System.out.println("Workload size : " + Integer.toString(encoded.length));
 				data = encoding.decode(ByteBuffer.wrap(encoded)).toString();
 			} 
 			catch (IOException e) 
@@ -44,11 +45,13 @@ public class Client
 			
 			if(data!=null)
 			{
-				
+				long start = System.nanoTime();
 				String result = client.Process(data);
+				long end = System.nanoTime();
 				
 				System.out.println("Result : ");
 				System.out.println(result);
+				System.out.println("Time in ms : " + Float.toString((float)((end-start)/1000000.0)));
 
 			}
 			

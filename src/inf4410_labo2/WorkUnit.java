@@ -26,7 +26,24 @@ public class WorkUnit implements Runnable
 		
 		for(int i=0; i<words.length; ++i)
 		{
-			if(words[i].charAt(words[i].length()-1) == '!' || words[i].charAt(words[i].length()-1) == '?' || words[i].charAt(words[i].length()-1) == '.')
+			words[i] = words[i].trim();
+		
+			if(words[i].length()> 0 && words[i].charAt(words[i].length()-1) == '"')
+			{
+				words[i] = words[i].substring(0,(words[i].length()-1));
+			}
+		
+			if(words[i].length()> 0 && words[i].charAt(0) == '"')
+			{
+				words[i] = words[i].substring(1,words[i].length());
+			}
+			
+			if(words[i].length()> 0 &&  
+			   (words[i].charAt(words[i].length()-1) == '!' || 
+			    words[i].charAt(words[i].length()-1) == '?' || 
+			    words[i].charAt(words[i].length()-1) == '.'	||
+			    words[i].charAt(words[i].length()-1) == ',' || 
+			    words[i].charAt(words[i].length()-1) == ';'))
 			{
 				words[i] = words[i].substring(0,(words[i].length()-1));
 			}		
@@ -44,6 +61,9 @@ public class WorkUnit implements Runnable
 			}
 		}
 		
+		System.out.println("Work Unit : Reporting work");
+		
 		parent_.Report(result);
-	}
+	}		
+	
 }
