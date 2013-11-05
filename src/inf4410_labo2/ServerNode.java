@@ -8,6 +8,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Random;
 
@@ -96,13 +97,13 @@ public class ServerNode implements ServerNodeInterface {
 	{
 		int result;
 		
-		if(!IsFailing(workLoad.length))
+		if(!IsFailing(Arrays.toString(workLoad).getBytes().length -2 -(2*(workLoad.length-1))))
 		{
 	    	WorkUnit workUnit = new WorkUnit(this,workLoad);
 			Thread workingThread = new Thread(workUnit);
 			workingThread.start();
 			
-			System.out.println("Server Node : Work Started ( " + Integer.toString(workLoad.length) + " B)");
+			System.out.println("Server Node : Work Started ( " + Integer.toString(Arrays.toString(workLoad).getBytes().length -2 -(2*(workLoad.length-1))) + " B)");
 			
 			result=0;
 		}

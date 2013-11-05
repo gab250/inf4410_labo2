@@ -211,6 +211,17 @@ public class Dispatcher implements DispatcherInterface {
      		
      		boolean waitDone;
      		
+     		//Print jobs count before
+     		System.out.println("Work journal : ");
+     		
+     		for(int i=0; i<aliveWorkers.size(); ++i)
+			{
+				System.out.println("Worker id#"+ Integer.toString(i) + "nb of job expected : " + Integer.toString(workDispatchingJournal.get(aliveWorkers.get(i)).size()));
+			}
+     		
+     		System.out.println("");
+     		
+     		
      		//Wait for completion
      		do
      		{
@@ -226,6 +237,14 @@ public class Dispatcher implements DispatcherInterface {
          			
      		}while(!waitDone);
      		
+     		//Print job count after
+     		System.out.println("After wait we have ");
+     		System.out.println("");
+     		
+     		for(int i=0; i<aliveWorkers.size(); ++i)
+			{
+				System.out.println("Worker id#"+ Integer.toString(i) + "nb of job reported : " + Integer.toString(workersNbOfJobsDone_.get(aliveWorkers.get(i))));
+			}
      		
 			//Merge results
 			for(int i=0; i<aliveWorkers.size(); ++i)
@@ -326,22 +345,24 @@ public class Dispatcher implements DispatcherInterface {
 			}
 			else
 			{
+				System.out.println("Merging workers own results");
+				
 				//New results 
-				Map<String,Integer> combinedResults = new HashMap<String,Integer>();
+				//Map<String,Integer> combinedResults = new HashMap<String,Integer>();
 				
 				//Merge results
-				for(Entry<String, Integer> entry : results_.get(workerID).entrySet())
+				for(Entry<String, Integer> entry : result.entrySet())
 				{
-					if(combinedResults.containsKey(entry.getKey()))
+					if(results_.get(workerID).containsKey(entry.getKey()))
 					{
-						int oldValue = combinedResults.get(entry.getKey());
-						int newValue = oldValue + results_.get(workerID).get(entry.getKey());
+						int oldValue = results_.get(workerID).get(entry.getKey());
+						int newValue = oldValue + result.get(entry.getKey());
 					
-						combinedResults.put(entry.getKey(), newValue);
+						results_.get(workerID).put(entry.getKey(), newValue);
 					}
 					else
 					{
-						combinedResults.put(entry.getKey(), entry.getValue());
+						results_.get(workerID).put(entry.getKey(), result.get(entry.getKey()));
 					}
 				}
 				
