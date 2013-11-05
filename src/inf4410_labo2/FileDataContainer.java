@@ -4,20 +4,21 @@ import java.util.Arrays;
 
 public class FileDataContainer 
 {
-	private byte[] data_;
+	//private byte[] data_;
+	private String[] data_;
 	private int currentPosition_;
 	private float pourcentageConfirmed_;
 	
-	public FileDataContainer(byte[] data)
+	public FileDataContainer(String[] data)
 	{
 		data_ = data;
 		currentPosition_ = 0;
 		pourcentageConfirmed_= 0;
 	}
 
-	public byte[] GetDataPortion(float percentage)
+	public String[] GetDataPortion(float percentage)
 	{
-		byte[] dataCopy; 
+		String[] dataCopy; 
 		
 		
 		if((percentage + pourcentageConfirmed_) < 1)
@@ -62,7 +63,7 @@ public class FileDataContainer
 		return (1-pourcentageConfirmed_);
 	}
 	
-	public byte[] getData(Interval interval)
+	public String[] getData(Interval interval)
 	{
 		return Arrays.copyOfRange(data_,interval.getLowerBound(), interval.getUpperBound());
 	}

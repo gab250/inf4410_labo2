@@ -110,7 +110,9 @@ public class Dispatcher implements DispatcherInterface {
 	{
 		long start = System.nanoTime();
 		long end=0;
-		byte[] workLoadInByte = workLoad.getBytes();
+		//byte[] workLoadInByte = workLoad.getBytes();
+		String[] words = getWords(workLoad);
+		
 		Map<String,Integer> combinedResults = new HashMap<String,Integer>();
 						
 		//Clear results 
@@ -129,7 +131,7 @@ public class Dispatcher implements DispatcherInterface {
 		if(aliveWorkers.size() > 0)
 		{
 			Map<Integer,Vector<Interval>> workDispatchingJournal = new HashMap<Integer,Vector<Interval>>();
-			FileDataContainer data = new FileDataContainer(workLoadInByte);
+			FileDataContainer data = new FileDataContainer(words);
 			
 			//initialize vectors of workHistory
 			for(int i=0; i<aliveWorkers.size(); ++i)
@@ -426,4 +428,15 @@ public class Dispatcher implements DispatcherInterface {
 		
 		return result;
 	}
+	
+	private String[] getWords(String text)
+	{
+		
+		text = text.replace('\n', ' ');
+		text = text.replace('\r', ' ');
+		String[] words = text.split(" ");
+		
+		return words;
+	}
+	
 }

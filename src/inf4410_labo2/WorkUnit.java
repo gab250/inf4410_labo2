@@ -6,9 +6,9 @@ import java.util.Map;
 public class WorkUnit implements Runnable 
 {
 	private ServerNode parent_;
-	private byte[] workLoad_;
+	private String[] workLoad_;
 
-	public WorkUnit(ServerNode parent, byte[] workLoad)
+	public WorkUnit(ServerNode parent, String[] workLoad)
 	{
 		parent_ = parent;
 		workLoad_ = workLoad;
@@ -17,47 +17,47 @@ public class WorkUnit implements Runnable
 	@Override
 	public void run() 
 	{
-		String stringWorkLoad = new String(workLoad_);
+		/*String stringWorkLoad = new String(workLoad_);
 		stringWorkLoad = stringWorkLoad.replace('\n', ' ');
 		stringWorkLoad = stringWorkLoad.replace('\r', ' ');
-		String[] words = stringWorkLoad.split(" ");
+		String[] words = stringWorkLoad.split(" ");*/
 		
 		Map<String,Integer> result = new HashMap<String,Integer>();
 		
-		for(int i=0; i<words.length; ++i)
+		for(int i=0; i<workLoad_.length; ++i)
 		{
-			words[i] = words[i].trim();
+			workLoad_[i] = workLoad_[i].trim();
 		
-			if(words[i].length()> 0 && words[i].charAt(words[i].length()-1) == '"')
+			if(workLoad_[i].length()> 0 && workLoad_[i].charAt(workLoad_[i].length()-1) == '"')
 			{
-				words[i] = words[i].substring(0,(words[i].length()-1));
+				workLoad_[i] = workLoad_[i].substring(0,(workLoad_[i].length()-1));
 			}
 		
-			if(words[i].length()> 0 && words[i].charAt(0) == '"')
+			if(workLoad_[i].length()> 0 && workLoad_[i].charAt(0) == '"')
 			{
-				words[i] = words[i].substring(1,words[i].length());
+				workLoad_[i] = workLoad_[i].substring(1,workLoad_[i].length());
 			}
 			
-			if(words[i].length()> 0 &&  
-			   (words[i].charAt(words[i].length()-1) == '!' || 
-			    words[i].charAt(words[i].length()-1) == '?' || 
-			    words[i].charAt(words[i].length()-1) == '.'	||
-			    words[i].charAt(words[i].length()-1) == ',' || 
-			    words[i].charAt(words[i].length()-1) == ';'))
+			if(workLoad_[i].length()> 0 &&  
+			   (workLoad_[i].charAt(workLoad_[i].length()-1) == '!' || 
+			    workLoad_[i].charAt(workLoad_[i].length()-1) == '?' || 
+			    workLoad_[i].charAt(workLoad_[i].length()-1) == '.'	||
+			    workLoad_[i].charAt(workLoad_[i].length()-1) == ',' || 
+			    workLoad_[i].charAt(workLoad_[i].length()-1) == ';'))
 			{
-				words[i] = words[i].substring(0,(words[i].length()-1));
+				workLoad_[i] = workLoad_[i].substring(0,(workLoad_[i].length()-1));
 			}		
 			
-			if(result.containsKey(words[i]))
+			if(result.containsKey(workLoad_[i]))
 			{
-				int oldValue = result.get(words[i]);
+				int oldValue = result.get(workLoad_[i]);
 				int newValue = ++oldValue;
 				
-				result.put(words[i], newValue);
+				result.put(workLoad_[i], newValue);
 			}
 			else
 			{
-				result.put(words[i], 1);
+				result.put(workLoad_[i], 1);
 			}
 		}
 		

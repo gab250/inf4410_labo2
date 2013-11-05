@@ -5,6 +5,6 @@ import java.rmi.RemoteException;
 
 public interface ServerNodeInterface extends Remote
 {
-	public int Process(byte[] workLoad) throws RemoteException;
+	public int Process(String[] workLoad) throws RemoteException;
 	public boolean IsAlive() throws RemoteException;
 }

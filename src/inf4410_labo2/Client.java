@@ -37,6 +37,7 @@ public class Client
 				encoded = Files.readAllBytes(Paths.get(args[2]));
 				System.out.println("Workload size : " + Integer.toString(encoded.length));
 				data = encoding.decode(ByteBuffer.wrap(encoded)).toString();
+			
 			} 
 			catch (IOException e) 
 			{
@@ -45,7 +46,6 @@ public class Client
 			
 			if(data!=null)
 			{
-				
 				String result = client.Process(data);
 				
 				if(result!=null)

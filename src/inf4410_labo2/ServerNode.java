@@ -92,7 +92,7 @@ public class ServerNode implements ServerNodeInterface {
 	}
 		
 	@Override
-	public int Process(byte[] workLoad) throws RemoteException 
+	public int Process(String[] workLoad) throws RemoteException 
 	{
 		int result;
 		
