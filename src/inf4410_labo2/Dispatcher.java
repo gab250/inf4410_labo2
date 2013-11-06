@@ -21,20 +21,20 @@ public class Dispatcher implements DispatcherInterface {
 	static private Lock lock_;
 	
 	private Map<Integer,ServerNodeInterface> Workers_; 
-	private int[][] statistics_;
+	private boolean securized_;
 		
 	public static void main(String[] args) throws Exception
 	{
-		Dispatcher dispatcher = new Dispatcher();
+		Dispatcher dispatcher = new Dispatcher(Boolean.valueOf(args[0]));
 		dispatcher.run();
 	}	
 	
-	public Dispatcher()
+	public Dispatcher(boolean securized)
 	{
 		Workers_ = new HashMap<Integer,ServerNodeInterface>();
 		results_ = new HashMap<Integer,Map<String,Integer>>();
 		lock_ = new ReentrantLock();
-		
+		securized_ = securized;
 	}
 	
 	@Override
@@ -110,20 +110,16 @@ public class Dispatcher implements DispatcherInterface {
 	{
 		long start = System.nanoTime();
 		long end=0;
-		//byte[] workLoadInByte = workLoad.getBytes();
+	
 		String[] words = getWords(workLoad);
-		
 		Map<String,Integer> combinedResults = new HashMap<String,Integer>();
 						
 		//Clear results 
 		results_ = new HashMap<Integer,Map<String,Integer>>();
 		workersNbOfJobsDone_ = new HashMap<Integer,Integer>();
 				
-		//Dispatch to workers
-		
 		//Check livelyness of workers
 		Vector<Integer> aliveWorkers = new Vector<Integer>();
-		
 		ClearDeadWorkers();
 		aliveWorkers = GetWorkerAlive();
 				
@@ -139,88 +135,23 @@ public class Dispatcher implements DispatcherInterface {
 				workDispatchingJournal.put(aliveWorkers.get(i), new Vector<Interval>());
 			}
 			
-			/*
-			int sizeOfWorkload = workLoadInByte.length/aliveWorkers.size();
-			int processErrorCode;
-			
-			for(int i=0; i<aliveWorkers.size(); ++i)
-			{
-				if(i != aliveWorkers.size() -1 )
-				{
-					processErrorCode = Workers_.get(aliveWorkers.get(i)).Process(Arrays.copyOfRange(workLoadInByte, i*sizeOfWorkload, i*sizeOfWorkload + (sizeOfWorkload-1)));
-				}
-				else
-				{	
-					processErrorCode = Workers_.get(aliveWorkers.get(i)).Process(Arrays.copyOfRange(workLoadInByte, i*sizeOfWorkload, workLoadInByte.length-1));
-				}
-
-			}
-		    */
-			
 			//Initialize
 			for(int i=0; i<aliveWorkers.size(); ++i)
 			{
 				workersNbOfJobsDone_.put(aliveWorkers.get(i), 0);
 			}
-						
-			//Dispatch work
-			while(data.DataLeft() > 0)
-			{	
-				int k=0;
-				
-				for(int i=0; i<aliveWorkers.size(); ++i)
-				{
-					int j=0;
-					int processErrorCode;
-					
-					do
-					{
-						processErrorCode = Workers_.get(aliveWorkers.get(i)).Process(data.GetDataPortion(data.getPourcentageLeft()/(aliveWorkers.size()-i + j)));
-							
-     					if(processErrorCode == 0)
-						{
-							float pourcentageConfirmer = data.getPourcentageLeft()/(aliveWorkers.size()-i + j);
-														
-							Interval workHistory = data.Confirm(pourcentageConfirmer);
-							workDispatchingJournal.get(aliveWorkers.get(i)).add(workHistory);
-						}
-						
-						j++;
-						
-					}while(processErrorCode == -1);
-				
-				}
-				
-				k++;
-			}				
+		
+			if(securized_)
+			{
+				SecurizedProcess(aliveWorkers,data,workDispatchingJournal);
+			}
+			else
+			{
+				UnSecurizedProcess(aliveWorkers,data,workDispatchingJournal);
+			}
 						
      		//Wait for results
-     		/*
-			while(GetResultSize()<nbOfWorkers)
-			{
-				try 
-				{
-					Thread.sleep(0, 1);
-					
-				} catch (InterruptedException e) 
-				{
-					e.printStackTrace();
-				}
-			}
-			*/
-     		
-     		boolean waitDone;
-     		
-     		//Print jobs count before
-     		System.out.println("Work journal : ");
-     		
-     		for(int i=0; i<aliveWorkers.size(); ++i)
-			{
-				System.out.println("Worker id#"+ Integer.toString(i) + "nb of job expected : " + Integer.toString(workDispatchingJournal.get(aliveWorkers.get(i)).size()));
-			}
-     		
-     		System.out.println("");
-     		
+       		boolean waitDone;
      		
      		//Wait for completion
      		do
@@ -237,33 +168,74 @@ public class Dispatcher implements DispatcherInterface {
          			
      		}while(!waitDone);
      		
-     		//Print job count after
-     		System.out.println("After wait we have ");
-     		System.out.println("");
-     		
-     		for(int i=0; i<aliveWorkers.size(); ++i)
-			{
-				System.out.println("Worker id#"+ Integer.toString(i) + "nb of job reported : " + Integer.toString(workersNbOfJobsDone_.get(aliveWorkers.get(i))));
-			}
-     		
-			//Merge results
-			for(int i=0; i<aliveWorkers.size(); ++i)
-			{
-				for(Entry<String, Integer> entry : results_.get(aliveWorkers.get(i)).entrySet())
+     		//Merge results (securized)
+     		if(securized_)
+     		{
+				for(int i=0; i<aliveWorkers.size(); ++i)
 				{
-					if(combinedResults.containsKey(entry.getKey()))
+					for(Entry<String, Integer> entry : results_.get(aliveWorkers.get(i)).entrySet())
 					{
-						int oldValue = combinedResults.get(entry.getKey());
-						int newValue = oldValue + results_.get(aliveWorkers.get(i)).get(entry.getKey());
-					
-						combinedResults.put(entry.getKey(), newValue);
-					}
-					else
-					{
-						combinedResults.put(entry.getKey(), entry.getValue());
+						if(combinedResults.containsKey(entry.getKey()))
+						{
+							int oldValue = combinedResults.get(entry.getKey());
+							int newValue = oldValue + results_.get(aliveWorkers.get(i)).get(entry.getKey());
+						
+							combinedResults.put(entry.getKey(), newValue);
+						}
+						else
+						{
+							combinedResults.put(entry.getKey(), entry.getValue());
+						}
 					}
 				}
-			}
+     		}
+     		else //Compare results (unsecurized)
+     		{
+     			
+     			Map<Map<String,Integer>,Integer> resultCount = new HashMap<Map<String,Integer>,Integer>();
+     			
+     			
+     			//Construct result count
+     			for(int i=0; i<aliveWorkers.size(); ++i)
+				{
+     				
+     				if(resultCount.size() == 0)
+     				{
+     					resultCount.put(results_.get(aliveWorkers.get(i)),1);
+     				}
+     				else
+     				{
+        				
+         				if(resultCount.containsKey(results_.get(aliveWorkers.get(i))))
+         				{
+         					int oldValue = resultCount.get(results_.get(aliveWorkers.get(i)));
+         					int newValue = ++oldValue;
+         					
+         					resultCount.put(results_.get(aliveWorkers.get(i)),newValue);
+         				}
+         				else
+         				{
+           					resultCount.put(results_.get(aliveWorkers.get(i)), 1);
+         				}
+     				}
+     			}
+     			
+     			int max=0;
+     			
+     			
+     			//Find highest result
+     			for(Entry<Map<String,Integer>, Integer> entryAll : resultCount.entrySet())
+     			{
+     				int currentValue = resultCount.get(entryAll.getKey());
+     				
+     				if(currentValue > max)
+     				{
+     					max = currentValue;
+     					combinedResults = entryAll.getKey();
+     				}
+     			}
+     			
+     		}
 					
 		}
 		else
@@ -345,11 +317,6 @@ public class Dispatcher implements DispatcherInterface {
 			}
 			else
 			{
-				System.out.println("Merging workers own results");
-				
-				//New results 
-				//Map<String,Integer> combinedResults = new HashMap<String,Integer>();
-				
 				//Merge results
 				for(Entry<String, Integer> entry : result.entrySet())
 				{
@@ -460,4 +427,81 @@ public class Dispatcher implements DispatcherInterface {
 		return words;
 	}
 	
+	private void SecurizedProcess(Vector<Integer> aliveWorkers, FileDataContainer data, Map<Integer,Vector<Interval>> workDispatchingJournal) throws RemoteException
+	{
+		//Dispatch work
+		while(data.DataLeft() > 0)
+		{	
+    		for(int i=0; i<aliveWorkers.size(); ++i)
+			{
+				int j=0;
+				int processErrorCode;
+				
+				do
+				{
+					if(data.getPourcentageLeft() == 1)
+					{
+						processErrorCode = Workers_.get(aliveWorkers.get(i)).Process(data.GetDataPortion(data.getPourcentageLeft()/(aliveWorkers.size()-i + j)),true);
+					}
+					else
+					{
+						processErrorCode = Workers_.get(aliveWorkers.get(i)).Process(data.GetDataPortion(data.getPourcentageLeft()/(aliveWorkers.size()-i + j)),false);
+					}
+					
+				    if(processErrorCode == 0)
+					{
+						float pourcentageConfirmer = data.getPourcentageLeft()/(aliveWorkers.size()-i + j);
+													
+						Interval workHistory = data.Confirm(pourcentageConfirmer);
+						workDispatchingJournal.get(aliveWorkers.get(i)).add(workHistory);
+					}
+					
+					j++;
+					
+				}while(processErrorCode == -1);
+			
+			}
+
+		}			
+	}
+	
+	
+	private void UnSecurizedProcess(Vector<Integer> aliveWorkers, FileDataContainer data, Map<Integer,Vector<Interval>> workDispatchingJournal) throws RemoteException
+	{
+		//Dispatch work
+		for(int i=0; i<aliveWorkers.size(); ++i)
+		{
+			while(data.DataLeft() > 0)
+			{	
+				int j=1;
+				int processErrorCode;
+				
+				do
+				{
+					if(data.getPourcentageLeft() == 1)
+					{
+						processErrorCode = Workers_.get(aliveWorkers.get(i)).Process(data.GetDataPortion(data.getPourcentageLeft()/(j)),true);
+					}
+					else
+					{
+						processErrorCode = Workers_.get(aliveWorkers.get(i)).Process(data.GetDataPortion(data.getPourcentageLeft()/(j)),false);
+					}
+					
+				    if(processErrorCode == 0)
+					{
+						float pourcentageConfirmer = data.getPourcentageLeft()/(j);
+													
+						Interval workHistory = data.Confirm(pourcentageConfirmer);
+						workDispatchingJournal.get(aliveWorkers.get(i)).add(workHistory);
+					}
+					
+					j++;
+					
+				}while(processErrorCode == -1);
+			}
+			
+			//Reset data cursour
+			data.Reset();
+		}
+	}
 }

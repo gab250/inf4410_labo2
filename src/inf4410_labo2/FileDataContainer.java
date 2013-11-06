@@ -4,7 +4,6 @@ import java.util.Arrays;
 
 public class FileDataContainer 
 {
-	//private byte[] data_;
 	private String[] data_;
 	private int currentPosition_;
 	private float pourcentageConfirmed_;
@@ -66,5 +65,11 @@ public class FileDataContainer
 	public String[] getData(Interval interval)
 	{
 		return Arrays.copyOfRange(data_,interval.getLowerBound(), interval.getUpperBound());
+	}
+	
+	public void Reset()
+	{
+		currentPosition_ = 0;
+		pourcentageConfirmed_= 0;
 	}
 }

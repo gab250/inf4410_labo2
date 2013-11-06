@@ -1,3 +1,3 @@
 java -cp dispatcher.jar \
 	-Djava.security.policy=policy \
-	inf4410_labo2.Dispatcher 
+	inf4410_labo2.Dispatcher $1 

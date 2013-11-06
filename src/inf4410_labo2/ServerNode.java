@@ -19,6 +19,7 @@ public class ServerNode implements ServerNodeInterface {
 	private int id_;
 	private int capacity_;
 	private float calculationFailureRate_;
+	private boolean isMalicious_;
 	
 	public static void main(String[] args)
 	{
@@ -42,6 +43,8 @@ public class ServerNode implements ServerNodeInterface {
 		dispatcher_ = loadDispatcherStub(hostName);
 		capacity_ = capacity;
 		calculationFailureRate_ = failureRate;
+		
+		isMalicious_ =  false;
     }
 	
 	public void Report(Map<String,Integer> result)
@@ -93,13 +96,31 @@ public class ServerNode implements ServerNodeInterface {
 	}
 		
 	@Override
-	public int Process(String[] workLoad) throws RemoteException 
+	public int Process(String[] workLoad, boolean firstJob) throws RemoteException 
 	{
 		int result;
 		
 		if(!IsFailing(Arrays.toString(workLoad).getBytes().length -2 -(2*(workLoad.length-1))))
 		{
-	    	WorkUnit workUnit = new WorkUnit(this,workLoad);
+			WorkUnit workUnit;
+			
+			if(calculationFailureRate_ == 0)
+			{
+				workUnit = new WorkUnit(this,workLoad,false);
+				
+			}
+			else
+			{
+				if(firstJob)
+				{
+					isMalicious_ = IsMalicious();
+				}
+				
+				System.out.println("Is Malicious? : " + Boolean.toString(isMalicious_));
+				
+				workUnit = new WorkUnit(this,workLoad,isMalicious_);
+			}
+			
 			Thread workingThread = new Thread(workUnit);
 			workingThread.start();
 			
@@ -109,8 +130,6 @@ public class ServerNode implements ServerNodeInterface {
 		}
 		else
 		{
-			System.out.println("Work failed");
-			
 			result=-1;
 		}
 				
@@ -171,6 +190,25 @@ public class ServerNode implements ServerNodeInterface {
 		
 		return result;
 
+	}
+	
+	private boolean IsMalicious()
+	{
+		Random rand = new Random();
+		int random = rand.nextInt(100);
+		
+		boolean result;
+				
+		if(random < calculationFailureRate_*100)
+		{
+			result = true;
+		}
+		else
+		{ 
+			result = false;
+		}
+	
+		return result;
 	}
 
 }

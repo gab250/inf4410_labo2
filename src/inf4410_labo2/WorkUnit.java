@@ -2,28 +2,26 @@ package inf4410_labo2;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 public class WorkUnit implements Runnable 
 {
 	private ServerNode parent_;
 	private String[] workLoad_;
+	private boolean isMalicious_;
 
-	public WorkUnit(ServerNode parent, String[] workLoad)
+	public WorkUnit(ServerNode parent, String[] workLoad, boolean isMalicious)
 	{
 		parent_ = parent;
 		workLoad_ = workLoad;
+		isMalicious_ = isMalicious;
 	}
-		
+			
 	@Override
 	public void run() 
 	{
-		/*String stringWorkLoad = new String(workLoad_);
-		stringWorkLoad = stringWorkLoad.replace('\n', ' ');
-		stringWorkLoad = stringWorkLoad.replace('\r', ' ');
-		String[] words = stringWorkLoad.split(" ");*/
-		
-		Map<String,Integer> result = new HashMap<String,Integer>();
-		
+     	Map<String,Integer> result = new HashMap<String,Integer>();
+     	
 		for(int i=0; i<workLoad_.length; ++i)
 		{
 			workLoad_[i] = workLoad_[i].trim();
@@ -53,7 +51,17 @@ public class WorkUnit implements Runnable
 				int oldValue = result.get(workLoad_[i]);
 				int newValue = ++oldValue;
 				
-				result.put(workLoad_[i], newValue);
+				if(isMalicious_)
+				{
+					Random rand = new Random();
+					
+					result.put(workLoad_[i], (newValue + (rand.nextInt()%4 + 1)));
+				}
+				else
+				{
+					result.put(workLoad_[i], newValue);
+				}
+				
 			}
 			else
 			{
